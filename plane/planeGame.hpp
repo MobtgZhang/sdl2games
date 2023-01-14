@@ -54,7 +54,7 @@ public:
         this->m_background_surface = NULL;
     }
     void loadPNG(char* filename){
-        this->m_background_surface = IMG_LoadJPG_RW(SDL_RWFromFile(filename,"wb"));
+        this->m_background_surface = IMG_LoadPNG_RW(SDL_RWFromFile(filename,"wb"));
         if(!this->m_background_surface){
             fprintf(this->m_log,"Cannot open the %s!\n",filename);
             exit(-1);
@@ -65,6 +65,11 @@ public:
             fprintf(this->m_log,"Failed to init SDL2! Error:%s\n",SDL_GetError());
             exit(-1);
         }
+        this->loadJPG("start.jpg");
+        int w,h;
+        SDL_QueryTexture(m_background_texture,NULL,NULL,&w,&h);
+
+
         this->m_window = SDL_CreateWindow("飞机大战",
                                         SDL_WINDOWPOS_CENTERED,
                                         SDL_WINDOWPOS_CENTERED,
@@ -100,6 +105,18 @@ public:
     void render(){
         SDL_SetRenderDrawColor(this->m_renderer,0xFF,0xFF,0xFF,0xFF);
         SDL_RenderClear(this->m_renderer);
+
+        switch (m_state){
+        case PLANEGAME_START:
+            SDL_RenderCopy(this->m_renderer,this->m_background_texture,NULL,NULL);
+            break;
+        case PLANEGAME_END:
+            this->loadJPG("end.jpg");
+            SDL_RenderCopy(this->m_renderer,this->m_background_texture,NULL,NULL);
+            break;
+        default:
+            break;
+        }
         SDL_RenderPresent(this->m_renderer);
     }
 private:
