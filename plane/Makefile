@@ -4,7 +4,7 @@ main_file=$(src_path)/main.cpp
 head_file=$(src_path)/planeGame.hpp
 out_file=$(release_path)/game
 
-SDL_FLAGS=-lSDL2 -lSDL2_image
+SDL_FLAGS=-lSDL2 -lSDL2_image -lSDL2_ttf
 
 default:
 	mkdir -p $(release_path)

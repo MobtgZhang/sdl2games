@@ -15,6 +15,42 @@ enum GameState{
     PLANEGAME_END,
     PLANEGAME_PLAYING
 };
+
+//玩家类
+class Player{
+public:
+    Player(SDL_Renderer* renderer):m_playerRenderer(renderer),
+        m_imageSurface(NULL),m_imageTexture(NULL){
+            this->m_imageSurface = IMG_LoadPNG_RW(SDL_RWFromFile("myPlane.png","rb"));
+            this->m_height = this->m_imageSurface->w;
+            this->m_width = this->m_imageSurface->h;
+            this->m_imageTexture = SDL_CreateTextureFromSurface(this->m_playerRenderer,this->m_imageSurface);
+            SDL_FreeSurface(this->m_imageSurface);
+            this->m_imageSurface = NULL;
+    }
+    ~Player(){
+        if(this->m_imageTexture!=NULL){
+            SDL_DestroyTexture(this->m_imageTexture);
+        }
+    }
+    //对于飞机类的渲染效果
+    void render(Sint32 x,Sint32 y){
+        // x,y 是飞机的位置信息
+        SDL_ShowCursor(false);
+
+        SDL_Rect srcrect = {x,y,this->m_width,this->m_height};
+        SDL_RenderCopy(this->m_playerRenderer,this->m_imageTexture,NULL,&srcrect);
+    }
+private:
+    SDL_Surface* m_imageSurface;
+    SDL_Texture* m_imageTexture;
+
+    SDL_Renderer* m_playerRenderer;
+public:
+    int m_width;
+    int m_height;
+};
+
 //子弹类
 class Bullet{
 public:
@@ -162,40 +198,6 @@ private:
     
     std::default_random_engine m_e;//随机数引擎
 };
-//玩家类
-class Player{
-public:
-    Player(SDL_Renderer* renderer):m_playerRenderer(renderer),
-        m_imageSurface(NULL),m_imageTexture(NULL){
-            this->m_imageSurface = IMG_LoadPNG_RW(SDL_RWFromFile("myPlane.png","rb"));
-            this->m_height = this->m_imageSurface->w;
-            this->m_width = this->m_imageSurface->h;
-            this->m_imageTexture = SDL_CreateTextureFromSurface(this->m_playerRenderer,this->m_imageSurface);
-            SDL_FreeSurface(this->m_imageSurface);
-            this->m_imageSurface = NULL;
-    }
-    ~Player(){
-        if(this->m_imageTexture!=NULL){
-            SDL_DestroyTexture(this->m_imageTexture);
-        }
-    }
-    //对于飞机类的渲染效果
-    void render(Sint32 x,Sint32 y){
-        // x,y 是飞机的位置信息
-        SDL_ShowCursor(false);
-
-        SDL_Rect srcrect = {x,y,this->m_width,this->m_height};
-        SDL_RenderCopy(this->m_playerRenderer,this->m_imageTexture,NULL,&srcrect);
-    }
-private:
-    SDL_Surface* m_imageSurface;
-    SDL_Texture* m_imageTexture;
-
-    SDL_Renderer* m_playerRenderer;
-public:
-    int m_width;
-    int m_height;
-};
 //主游戏程序
 class PlaneGame{
 public:
@@ -279,6 +281,7 @@ public:
 
         SDL_RenderSetScale(this->m_renderer,1.5,1.5);
     }
+    // 初始化游戏
     void init(){
         if(SDL_Init(SDL_INIT_VIDEO)<0){
             fprintf(this->m_log,"Failed to init SDL2! Error:%s\n",SDL_GetError());
@@ -307,15 +310,40 @@ public:
     }
     //主循环函数
     void mainLoop(){
+        printf("Here is the while loop");
+        this->m_bullet = new Bullet(this->m_renderer);
+        this->m_player = new Player(this->m_renderer);
+        this->m_enemyPlane = new EnemyPlane(this->m_renderer);
+
         SDL_Event event;
+        uint32_t begin,end,_time,rate;
+        int32_t delay;//延迟
+        
         while(true){
+            
+            begin = SDL_GetTicks();
             this->render();
             if (SDL_PollEvent(&event)){
                 if(event.type == SDL_KEYDOWN){
                     //按键事件
+                    switch (event.key.keysym.sym){
+                    case SDLK_SPACE:
+                        //表示游戏暂停
+                        if(this->m_state!=PLANEGAME_PLAYING){
+                            this->m_enemyPlane->start();
+                            this->loadJPG("background.jpg"); //加载背景状态
+                            this->m_state = PLANEGAME_PLAYING; // 切换北京
+                        }
+                        break;
+                    case SDLK_ESCAPE:
+                        //退出游戏
+                        exit(0);
+                    default:
+                        break;
+                    }
                 }
                 if(event.type == SDL_QUIT){
-                    break;
+                    exit(0);
                 }
             }
         }
