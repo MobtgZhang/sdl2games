@@ -11,6 +11,7 @@ default:
 	g++ $(main_file) $(head_file) -w $(SDL_FLAGS) -o $(out_file)
 	cp $(src_path)/*.jpg $(release_path)
 	cp $(src_path)/*.png $(release_path)
+	cp $(src_path)/*.ttf $(release_path)
 clean:
-	rm -rf bin
+	rm -rf $(release_path)
 
