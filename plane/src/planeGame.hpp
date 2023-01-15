@@ -3,7 +3,8 @@
 # include<SDL2/SDL.h>
 # include<SDL2/SDL_image.h>
 # include<SDL2/SDL_ttf.h>
-
+# include<vector>
+# include<random>
 //游戏状态信息
 enum GameState{
     PLANEGAME_START,
@@ -14,15 +15,41 @@ enum GameState{
 class Bullet{
 public:
     Bullet(SDL_Renderer* renderer){
+        this->m_log = fopen("Bullet.log","w");
+        if(this->m_log!=NULL){
+            exit(-1);
+        }
+        this->m_imageSurface = IMG_LoadPNG_RW(SDL_RWFromFile("bullet.png","rb"));
+        if(this->m_imageSurface==NULL){
+            fprintf(this->m_log,"Cannot open bullet.png! Error: %s\n",IMG_GetError());
+            exit(-1);
+        }
+        this->m_width = this->m_imageSurface->w;
+        this->m_height = this->m_imageSurface->h;
 
+        this->m_imageTexture = SDL_CreateTextureFromSurface(renderer,this->m_imageSurface);
+        SDL_FreeSurface(m_imageSurface);
+        m_imageSurface = NULL;
+
+        if(this->m_imageSurface==NULL){
+            fprintf(this->m_log,"Cannot create texture!\n");
+            exit(-1);
+        }
     }
     ~Bullet(){
-
+        if(this->m_log!=NULL){
+            fclose(this->m_log);
+        }
+        if(this->m_imageTexture!=NULL){
+            SDL_DestroyTexture(this->m_imageTexture);
+        }
     }
     //子弹类的渲染表示
     void render(){
 
     }
+    std::vector<SDL_Rect> m_position; //存储子弹的位置信息
+    int m_v;//表示子弹的速度
 private:
     SDL_Surface* m_imageSurface;
     SDL_Texture* m_imageTexture;
@@ -32,7 +59,27 @@ private:
     int m_width; //图片的宽
     int m_height; //图片的高
 };
-//飞机类
+//敌人飞机类
+class EnemyPlane{
+public:
+    EnemyPlane(){
+
+    }
+    ~EnemyPlane(){
+
+    }
+    //渲染
+    void render(){
+
+    }
+private:
+    SDL_Surface* m_imageSurface;
+    SDL_Texture* m_imageTexture;
+    FILE* m_log;//日志
+    uint32_t m_start;
+
+    std::default_random_engine m_e;//随机数引擎
+};
 //玩家类
 class Player{
 public:
