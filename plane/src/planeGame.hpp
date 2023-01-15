@@ -18,9 +18,9 @@ enum GameState{
 //子弹类
 class Bullet{
 public:
-    Bullet(SDL_Renderer* renderer){
+    Bullet(SDL_Renderer* renderer):m_v(500),m_imageSurface(NULL),m_imageTexture(NULL){
         this->m_log = fopen("Bullet.log","w");
-        if(this->m_log!=NULL){
+        if(this->m_log==NULL){
             exit(-1);
         }
         this->m_imageSurface = IMG_LoadPNG_RW(SDL_RWFromFile("bullet.png","rb"));
@@ -48,9 +48,33 @@ public:
             SDL_DestroyTexture(this->m_imageTexture);
         }
     }
+    // 开始计时
+    void start(){
+        this->m_start = SDL_GetTicks();
+    }
     //子弹类的渲染表示
-    void render(){
-
+    void render(SDL_Renderer* renderer,int x,int y,Player* player,int score){
+        uint32_t stop = SDL_GetTicks();
+        // 每间隔一段时间创新新子弹
+        if(stop - this->m_start >= m_v){
+            // 创建新子弹
+            SDL_Rect srcrect = {x + (player->m_width/2),y,this->m_width,this->m_height};
+            this->m_position.push_back(srcrect);
+            if(score>=100){
+                SDL_Rect srcrect1 = {x,y,this->m_width,this->m_height};
+                this->m_position.push_back(srcrect1);
+                SDL_Rect srcrect2 = {x + player->m_width,y,this->m_width,this->m_height};
+                this->m_position.push_back(srcrect2);
+            }
+            this->m_start = stop; //重置计时器
+        }
+        // 子弹移动
+        if(!this->m_position.empty()){
+            for(int k=0;k<this->m_position.size();k++){
+                this->m_position[k].y -= 2;  // 更新位置
+                SDL_RenderCopy(renderer,this->m_imageTexture,NULL,&this->m_position[k]); // 渲染
+            }
+        }
     }
     std::vector<SDL_Rect> m_position; //存储子弹的位置信息
     int m_v;//表示子弹的速度
@@ -68,11 +92,11 @@ class EnemyPlane{
 public:
     EnemyPlane(SDL_Renderer* renderer):m_imageSurface(NULL),m_imageTexture(NULL){
         this->m_log = fopen("EnemyPlane.log","w");
-        if(this->m_log!=NULL){
+        if(this->m_log==NULL){
             exit(-1);
         }
         this->m_imageSurface = IMG_LoadPNG_RW(SDL_RWFromFile("enemy_plane.png","rb"));
-        if(this->m_imageSurface!=NULL){
+        if(this->m_imageSurface==NULL){
             fprintf(m_log,"Cannot open enemy_plane.png! Error: %s\n",IMG_GetError());
             exit(-1);
         }
@@ -175,39 +199,75 @@ public:
 //主游戏程序
 class PlaneGame{
 public:
-    PlaneGame():m_log(NULL),m_state(PLANEGAME_START),m_window(NULL),m_renderer(NULL),
+    PlaneGame():
+        m_font(NULL),m_colour({0,0,0,255}),m_imagefile(NULL),
+        m_log(NULL),m_state(PLANEGAME_START),m_window(NULL),m_renderer(NULL),
         m_background_surface(NULL),m_background_texture(NULL){
         this->width = 640;
         this->height = 480;
-        this->m_window = NULL;
-        this->m_renderer = NULL;
         this->m_log = fopen("plane.log","w");
         if(this->m_log==NULL){
             exit(-1);
         }
         IMG_Init(IMG_INIT_JPG|IMG_INIT_PNG);
+
+        TTF_Init();
+
+        this->m_font = TTF_OpenFont("simkai.ttf",16);
     }
     ~PlaneGame(){
+        // 关闭日志文件
         if (this->m_log!=NULL){
             fclose(this->m_log);
         }
+        // 释放Surface
         if (this->m_background_surface!=NULL){
             SDL_FreeSurface(this->m_background_surface);
         }
+        // 销毁Texture
         if(this->m_background_texture!=NULL){
             SDL_DestroyTexture(this->m_background_texture);
         }
+        // 销毁Renderer
         if(this->m_renderer!=NULL){
             SDL_DestroyRenderer(this->m_renderer);
         }
+        // 销毁FontTexture
+        if(this->m_fontTexture){
+            SDL_DestroyTexture(this->m_fontTexture);
+        }
+        // 销毁窗口
         if(this->m_window!=NULL){
             SDL_DestroyWindow(this->m_window);
         }
+        // 删除敌机类
+        if(this->m_enemyPlane!=NULL){
+            delete this->m_enemyPlane;
+        }
+        // 关闭字体
+        if(this->m_font!=NULL){
+            TTF_CloseFont(this->m_font);
+        }
+        // 删除子弹类
+        if(this->m_bullet!=NULL){
+            delete this->m_bullet;
+        }
+        // 删除玩家类
+        if(this->m_player){
+            delete this->m_player;
+        }
         IMG_Quit();
 
+        TTF_Quit();
+        
         SDL_Quit();
     }
+    // 加载JPG图片
     void loadJPG(char* filename){
+        if(!strcmp(this->m_imagefile,filename)){
+            this->m_imagefile = filename; 
+        }else return;
+
         this->m_background_surface = IMG_LoadJPG_RW(SDL_RWFromFile(filename,"rb"));
         if(!this->m_background_surface){
             fprintf(this->m_log,"Cannot open the %s!\n",filename);
@@ -216,16 +276,8 @@ public:
         this->m_background_texture = SDL_CreateTextureFromSurface(this->m_renderer,this->m_background_surface);
         SDL_FreeSurface(m_background_surface);
         this->m_background_surface = NULL;
-    }
-    void loadPNG(char* filename){
-        this->m_background_surface = IMG_LoadPNG_RW(SDL_RWFromFile(filename,"rb"));
-        if(!this->m_background_surface){
-            fprintf(this->m_log,"Cannot open the %s!\n",filename);
-            exit(-1);
-        }
-        this->m_background_texture = SDL_CreateTextureFromSurface(this->m_renderer,this->m_background_surface);
-        SDL_FreeSurface(m_background_surface);
-        this->m_background_surface = NULL;
+
+        SDL_RenderSetScale(this->m_renderer,1.5,1.5);
     }
     void init(){
         if(SDL_Init(SDL_INIT_VIDEO)<0){
@@ -297,8 +349,21 @@ private:
     FILE* m_log; // 日志
     GameState m_state; // 游戏状态
 
+    EnemyPlane* m_enemyPlane; // 敌机
+    Player* m_player; // 游戏玩家
+    Bullet* m_bullet; // 子弹
+
     //窗口大小
     int width;
     int height;
+
+    Sint32 m_player_x;
+    Sint32 m_player_y;
+
+    TTF_Font* m_font; // 字体
+    SDL_Surface* m_fontSurface;
+    SDL_Texture* m_fontTexture;
+
+    SDL_Colour m_colour; // 字体颜色
 };
 # endif
