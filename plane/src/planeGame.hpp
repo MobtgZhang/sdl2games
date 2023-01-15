@@ -2,6 +2,7 @@
 # define __PLANEGAME_H__
 # include<SDL2/SDL.h>
 # include<SDL2/SDL_image.h>
+# include<SDL2/SDL_ttf.h>
 
 //游戏状态信息
 enum GameState{
@@ -9,7 +10,53 @@ enum GameState{
     PLANEGAME_END,
     PLANEGAME_PLAYING
 };
+//子弹类
+class Bullet{
+public:
+    Bullet(SDL_Renderer* renderer){
 
+    }
+    ~Bullet(){
+
+    }
+    //子弹类的渲染表示
+    void render(){
+
+    }
+private:
+    SDL_Surface* m_imageSurface;
+    SDL_Texture* m_imageTexture;
+    FILE* m_log;//日志
+
+    uint32_t m_start;
+    int m_width; //图片的宽
+    int m_height; //图片的高
+};
+//飞机类
+//玩家类
+class Player{
+public:
+    Player(SDL_Renderer* renderer):m_playerRenderer(renderer),
+        m_imageSurface(NULL),m_imageTexture(NULL){
+            this->m_imageSurface = IMG_LoadPNG_RW(SDL_RWFromFile("myPlane.png","rb"));
+            this->m_height = this->m_imageSurface->w;
+            this->m_width = this->m_imageSurface->h;
+            this->m_imageTexture = SDL_CreateTextureFromSurface(this->m_playerRenderer,this->m_imageSurface);
+            SDL_FreeSurface(this->m_imageSurface);
+            this->m_imageSurface = NULL;
+    }
+    ~Player(){
+
+    }
+private:
+    SDL_Surface* m_imageSurface;
+    SDL_Texture* m_imageTexture;
+
+    SDL_Renderer* m_playerRenderer;
+public:
+    int m_width;
+    int m_height;
+};
 //主游戏程序
 class PlaneGame{
 public:
@@ -41,10 +88,12 @@ public:
         if(this->m_window!=NULL){
             SDL_DestroyWindow(this->m_window);
         }
+        IMG_Quit();
+
         SDL_Quit();
     }
     void loadJPG(char* filename){
-        this->m_background_surface = IMG_LoadJPG_RW(SDL_RWFromFile(filename,"wb"));
+        this->m_background_surface = IMG_LoadJPG_RW(SDL_RWFromFile(filename,"rb"));
         if(!this->m_background_surface){
             fprintf(this->m_log,"Cannot open the %s!\n",filename);
             exit(-1);
@@ -54,23 +103,30 @@ public:
         this->m_background_surface = NULL;
     }
     void loadPNG(char* filename){
-        this->m_background_surface = IMG_LoadPNG_RW(SDL_RWFromFile(filename,"wb"));
+        this->m_background_surface = IMG_LoadPNG_RW(SDL_RWFromFile(filename,"rb"));
         if(!this->m_background_surface){
             fprintf(this->m_log,"Cannot open the %s!\n",filename);
             exit(-1);
         }
+        this->m_background_texture = SDL_CreateTextureFromSurface(this->m_renderer,this->m_background_surface);
+        SDL_FreeSurface(m_background_surface);
+        this->m_background_surface = NULL;
     }
     void init(){
         if(SDL_Init(SDL_INIT_VIDEO)<0){
             fprintf(this->m_log,"Failed to init SDL2! Error:%s\n",SDL_GetError());
             exit(-1);
         }
+        this->m_background_surface = IMG_LoadJPG_RW(SDL_RWFromFile("start.jpg","rb"));
+        this->width = this->m_background_surface->w * 1.5;
+        this->height = this->m_background_surface->h * 1.5;
         this->m_window = SDL_CreateWindow("飞机大战",
                                         SDL_WINDOWPOS_CENTERED,
                                         SDL_WINDOWPOS_CENTERED,
                                         this->width,
                                         this->height,
                                         SDL_WINDOW_SHOWN);
+        SDL_FreeSurface(m_background_surface);
         if(this->m_window==NULL){
             fprintf(this->m_log,"Cannot create the window! Error: %s\n",SDL_GetError());
             exit(-1);
@@ -81,8 +137,6 @@ public:
             exit(-1);
         }
         this->loadJPG("start.jpg");
-        int w,h;
-        SDL_QueryTexture(m_background_texture,NULL,NULL,&w,&h);
     }
     //主循环函数
     void mainLoop(){
@@ -106,6 +160,7 @@ public:
 
         switch (m_state){
         case PLANEGAME_START:
+            this->loadJPG("start.jpg");
             SDL_RenderCopy(this->m_renderer,this->m_background_texture,NULL,NULL);
             break;
         case PLANEGAME_END:
@@ -122,9 +177,13 @@ private:
     SDL_Renderer* m_renderer;
     SDL_Surface* m_background_surface;
     SDL_Texture* m_background_texture;
-    FILE* m_log;
+
+    char* m_imagefile; // 正在使用的图片
+    FILE* m_log; // 日志
+    GameState m_state; // 游戏状态
+
+    //窗口大小
     int width;
     int height;
-    GameState m_state;
 };
 # endif
