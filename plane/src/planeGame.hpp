@@ -5,6 +5,10 @@
 # include<SDL2/SDL_ttf.h>
 # include<vector>
 # include<random>
+
+# define FRAMERATE 60 //定义游戏中的帧率
+
+
 //游戏状态信息
 enum GameState{
     PLANEGAME_START,
@@ -62,22 +66,76 @@ private:
 //敌人飞机类
 class EnemyPlane{
 public:
-    EnemyPlane(){
+    EnemyPlane(SDL_Renderer* renderer):m_imageSurface(NULL),m_imageTexture(NULL){
+        this->m_log = fopen("EnemyPlane.log","w");
+        if(this->m_log!=NULL){
+            exit(-1);
+        }
+        this->m_imageSurface = IMG_LoadPNG_RW(SDL_RWFromFile("enemy_plane.png","rb"));
+        if(this->m_imageSurface!=NULL){
+            fprintf(m_log,"Cannot open enemy_plane.png! Error: %s\n",IMG_GetError());
+            exit(-1);
+        }
+        // 获取图片的宽和高
+        this->m_height = this->m_imageSurface->h;
+        this->m_width = this->m_imageSurface->w;
 
+        this->m_imageTexture = SDL_CreateTextureFromSurface(renderer,this->m_imageSurface);
+        SDL_FreeSurface(this->m_imageSurface);
+        this->m_imageSurface = NULL;
+        if(this->m_imageTexture==NULL){
+            fprintf(this->m_log,"Cannot create texture!\n");
+            exit(-1);
+        }
     }
     ~EnemyPlane(){
-
+        if(this->m_log!=NULL){
+            fclose(this->m_log);
+        }
+        if(this->m_imageTexture){
+            SDL_DestroyTexture(this->m_imageTexture);
+        }
+    }
+    //开始计时
+    void start(){
+        this->m_start = SDL_GetTicks();
     }
     //渲染
-    void render(){
+    void render(SDL_Renderer* renderer,int weight){
+        uint32_t stop = SDL_GetTicks();
+        static std::uniform_int_distribution<int> m_u(0,weight);
+        //每间隔一段时间创新新飞机
+        if(stop-this->m_start >= 550){
+            //创建新飞机
+            this->m_e.seed((unsigned)time(NULL)+m_e()); //这里表示更新种子
+            
+            int w = m_u(this->m_e);
+            SDL_Rect srcrect = {w,0,this->m_width,this->m_height};
+            
+            fprintf(this->m_log,"更新位置:{%d,0%d,%d}",w,this->m_width,this->m_height);
+            
+            m_position.push_back(srcrect);
 
+            this->m_start = stop; // 重置计时器
+        }
+
+        // 飞机移动
+        if(!m_position.empty()){
+            for(int k =0;k<m_position.size();k++){
+                m_position[k].y += 1; // 更新位置信息
+                SDL_RenderCopy(renderer,this->m_imageTexture,NULL,&this->m_position[k]);//渲染
+            }
+        }
     }
+    std::vector<SDL_Rect> m_position; // 存储位置信息
+    int m_height;
+    int m_width;
 private:
     SDL_Surface* m_imageSurface;
     SDL_Texture* m_imageTexture;
     FILE* m_log;//日志
     uint32_t m_start;
-
+    
     std::default_random_engine m_e;//随机数引擎
 };
 //玩家类
