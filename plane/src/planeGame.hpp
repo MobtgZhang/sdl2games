@@ -46,7 +46,17 @@ public:
             this->m_imageSurface = NULL;
     }
     ~Player(){
+        if(this->m_imageTexture!=NULL){
+            SDL_DestroyTexture(this->m_imageTexture);
+        }
+    }
+    //对于飞机类的渲染效果
+    void render(Sint32 x,Sint32 y){
+        // x,y 是飞机的位置信息
+        SDL_ShowCursor(false);
 
+        SDL_Rect srcrect = {x,y,this->m_width,this->m_height};
+        SDL_RenderCopy(this->m_playerRenderer,this->m_imageTexture,NULL,&srcrect);
     }
 private:
     SDL_Surface* m_imageSurface;
