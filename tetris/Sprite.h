@@ -38,7 +38,7 @@ public:
     SDL_Rect getTextureRect(){return this->rectTxt;}
     SDL_FRect getRect();
 
-    void movePosition(SDL_Point move);
+    void movePosition(SDL_FPoint move);
     void movePosition(float x,float y);
     void movePosition(int x,int y);
     

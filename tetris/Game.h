@@ -5,6 +5,8 @@
 # include<cstring>
 
 # include "ManagerTexture.h"
+# include "ManagerInput.h"
+
 
 class Game{
 public:
@@ -21,8 +23,7 @@ private:
     int GS_height;
 
     ManagerTexture managerTexture;
-
-    
+    ManagerInput managerInput;
 private:
     void initSDL();
     void Destroy();
